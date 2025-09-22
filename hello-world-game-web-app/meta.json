@@ -1,0 +1,19 @@
+{
+    "module_id": "naomi:hello-world-game-web-app",
+    "visibility": "public",
+    "url": "https://github.com/viam-labs/hello-world-game-module",
+    "description": "An application that allows you to play the desk safari game.",
+    "applications": [
+      {
+        "name": "hello-world-game-web-app",
+        "type": "single_machine",
+        "entrypoint": "build/index.html",
+        "customizations": {
+          "machinePicker": {
+            "heading": "Play Desk Safari",
+            "subheading": "Select a machine to play"
+          }
+        }
+      }
+    ]
+}
