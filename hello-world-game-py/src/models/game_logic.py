@@ -1,4 +1,3 @@
-import asyncio
 import random
 from datetime import datetime, timedelta
 
@@ -7,7 +6,6 @@ from typing import (Any, ClassVar, Dict, Final, List, Mapping, Optional,
 
 from typing_extensions import Self
 from viam.components.button import *
-from viam.components.camera import *
 from viam.components.component_base import ComponentBase
 from viam.proto.app.robot import ComponentConfig
 from viam.proto.common import Geometry, ResourceName
@@ -85,15 +83,11 @@ class GameLogic(Button, EasyResource):
         self.time_round_start: Optional[datetime] = None
         self.item_to_detect: str = ""
 
-        # Runtime control
-        self.running: Optional[bool] = None
-        self.event: asyncio.Event = asyncio.Event()
-        self.task: Optional[asyncio.Task] = None
-
         camera_name = config.attributes.fields["camera_name"].string_value
         detector_name = config.attributes.fields["detector_name"].string_value
 
-        # Get the resource name for the vision service
+        # Get the full resource name for the vision service
+        # (rdk:service:vision/object-detector)
         vision_resource_name = VisionClient.get_resource_name(detector_name)
 
         # Check if the vision resource exists in dependencies
@@ -104,44 +98,19 @@ class GameLogic(Button, EasyResource):
         self.detector = cast(VisionClient, vision_resource)
         self.camera_name = camera_name
 
-        # Start the game loop if not already running
-        if self.task is None:
-            self.start()
-        else:
-            self.logger.info("Game loop already running.")
-
         return super().reconfigure(config, dependencies)
 
-    def start(self):
-        if self.task is None:
-            loop = asyncio.get_running_loop()
-            self.task = loop.create_task(self._game_loop())
-            self.event.clear()
-            self.logger.info("Game loop started.")
+    async def push(
+        self,
+        *,
+        extra: Optional[Mapping[str, Any]] = None,
+        timeout: Optional[float] = None,
+        **kwargs
+    ) -> None:
+        self.logger.info("`push` is called")
+        self.new_game = True
 
-    def stop(self):
-        self.event.set()
-        if self.task is not None:
-            self.task.cancel()
-            self.task = None
-        self.logger.info("Game loop stopped.")
-
-    async def close(self):
-        self.stop()
-
-    async def _game_loop(self):
-        try:
-            while not self.event.is_set():
-                await self._process_game_state()
-                await asyncio.sleep(1)
-        except asyncio.CancelledError:
-            self.logger.info("Game loop cancelled.")
-        except Exception as e:
-            self.logger.error(f"Game loop error: {e}")
-        finally:
-            self.task = None
-
-    async def _process_game_state(self):
+    async def _run_game_loop(self):
         try:
             if self.new_game:
                 await self._start_new_game()
@@ -193,9 +162,7 @@ class GameLogic(Button, EasyResource):
         self.logger.info(f"Item detected: {self.item_to_detect}")
         self.logger.info(f"Score: {self.score}")
 
-        await self._start_new_round()
-
-    async def _start_new_round(self):
+        # start a new round
         self.time_round_start = datetime.now()
         self.logger.info(f"Starting new round at {self.time_round_start.strftime('%Y-%m-%d %H:%M:%S')}")
         self.item_to_detect = random.choice(self.POSSIBLE_OPTIONS)
@@ -208,16 +175,6 @@ class GameLogic(Button, EasyResource):
             self.time_round_start = None
             self.item_to_detect = ""
 
-    async def push(
-        self,
-        *,
-        extra: Optional[Mapping[str, Any]] = None,
-        timeout: Optional[float] = None,
-        **kwargs
-    ) -> None:
-        self.logger.info("`push` is called")
-        self.new_game = True
-
     async def do_command(
         self,
         command: Mapping[str, ValueTypes],
@@ -227,12 +184,14 @@ class GameLogic(Button, EasyResource):
     ) -> Mapping[str, ValueTypes]:
         result = {}
         for name, args in command.items():
-            if name == "action" and args == "get_data":
-                result["score"] = self.score
-                result["time_round_start"] = str(self.time_round_start)
-                result["item_to_detect"] = self.item_to_detect
-                return result
-        return {}
+            if name == "action" and args == "run_game_loop":
+                await self._run_game_loop()
+            # return the current game data for all commands
+            result["score"] = self.score
+            result["time_round_start"] = str(self.time_round_start)
+            result["item_to_detect"] = self.item_to_detect
+            self.logger.info(f"Game data: {result}")
+        return result
 
     async def get_geometries(
         self, *, extra: Optional[Dict[str, Any]] = None, timeout: Optional[float] = None

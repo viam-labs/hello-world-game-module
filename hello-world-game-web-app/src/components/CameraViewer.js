@@ -286,7 +286,7 @@ function CameraViewer({ machineId }) {
         const button = new ButtonClient(viamClient, 'button-1');
         const result = await button.doCommand(
           Struct.fromJson({
-            "action": "get_data",
+            "action": "",
           })
         );
         console.log("Result:", result);
