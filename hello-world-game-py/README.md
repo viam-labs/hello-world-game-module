@@ -1,18 +1,18 @@
-# Module hello-world-game-py 
+# Module hello-world-game-py
 
-Provide a description of the purpose of the module and any relevant information.
+A computer vision-based object detection game module that implements a button component with game logic. Players press the button to start a new game round where they must find and detect specific objects using a camera and object detection service.
 
 ## Model naomi:hello-world-game-py:game-logic
 
-Provide a description of the model and any relevant information.
+A button component that implements an interactive object detection game. When pressed, it starts a new game round where players have 60 seconds to detect a randomly selected object using computer vision. The game tracks score and provides real-time feedback through logging.
 
 ### Configuration
 The following attribute template can be used to configure this model:
 
 ```json
 {
-"attribute_1": <float>,
-"attribute_2": <string>
+  "camera_name": "<string>",
+  "detector_name": "<string>"
 }
 ```
 
@@ -20,31 +20,50 @@ The following attribute template can be used to configure this model:
 
 The following attributes are available for this model:
 
-| Name          | Type   | Inclusion | Description                |
-|---------------|--------|-----------|----------------------------|
-| `attribute_1` | float  | Required  | Description of attribute 1 |
-| `attribute_2` | string | Optional  | Description of attribute 2 |
+| Name             | Type   | Inclusion | Description                                    |
+|------------------|--------|-----------|------------------------------------------------|
+| `camera_name`    | string | Required  | Name of the camera component to use for detection |
+| `detector_name`  | string | Required  | Name of the vision service detector to use for object detection |
 
 #### Example Configuration
 
 ```json
 {
-  "attribute_1": 1.0,
-  "attribute_2": "foo"
+  "camera_name": "camera-1",
+  "detector_name": "object-detector"
 }
 ```
 
 ### DoCommand
 
-If your model implements DoCommand, provide an example payload of each command that is supported and the arguments that can be used. If your model does not implement DoCommand, remove this section.
+This model implements DoCommand with the following supported commands:
 
 #### Example DoCommand
 
 ```json
 {
-  "command_name": {
-    "arg1": "foo",
-    "arg2": 1
-  }
+  "action": "run_game_loop"
 }
 ```
+
+**Command Details:**
+- `action`: Set to `"run_game_loop"` to execute one iteration of the game logic
+- Returns current game state including:
+  - `score`: Current score (number of successful detections)
+  - `time_round_start`: Timestamp when current round started
+  - `item_to_detect`: Current object the player needs to find
+
+#### Game Logic Flow
+
+1. **Button Press**: When the button is pressed (`push` method), it sets `new_game = True`
+2. **Game Start**: Next `run_game_loop` call initializes a new game:
+   - Resets score to 0
+   - Selects a random object
+   - Starts 60-second timer
+3. **Detection Loop**: During active game:
+   - Captures image from configured camera
+   - Runs object detection using configured detector
+   - Checks if target object is detected with >50% confidence
+   - On successful detection: increments score and starts new round
+4. **Game End**: After 60 seconds, game ends and logs final score
+

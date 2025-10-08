@@ -1,14 +1,14 @@
 {
   "$schema": "https://dl.viam.dev/module.schema.json",
   "module_id": "naomi:hello-world-game-py",
-  "visibility": "private",
-  "url": "",
+  "visibility": "public",
+  "url": "https://github.com/viam-labs/hello-world-game-module/tree/main/hello-world-game-py",
   "description": "Modular button component: game-logic",
   "models": [
     {
       "api": "rdk:component:button",
       "model": "naomi:hello-world-game-py:game-logic",
-      "short_description": "Provide a short (100 characters or less) description of this model here",
+      "short_description": "A button component that implements a game logic. Press it to start a new game.",
       "markdown_link": "README.md#model-naomihello-world-game-pygame-logic"
     }
   ],
